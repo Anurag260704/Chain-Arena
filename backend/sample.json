@@ -1,0 +1,31 @@
+ [
+
+{
+  "email": "player2@example.com",
+  "password": "Password123!",
+  "username": "Player2"
+},
+{
+  "email": "player3@example.com",
+  "password": "Password123!",
+  "username": "Player3"
+},
+
+{
+  "email": "player3@example.com",
+  "password": "Password123!",
+  "username": "Player3"
+},
+{
+  "email": "player4@example.com",
+  "password": "Password123!",
+  "username": "Player4"
+},
+
+
+
+ ]
+
+
+ const user1 = eyJhbGciOiJIUzI1NiIsImtpZCI6InFmVE1RdllldHJMVFM4azkiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2NwendndHR2aXpybWlja2tqbmN6LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJhOGZkNWI2NC1hMjBkLTQ0Y2ItODdkZC0xMTk3YWQxYTM2MzkiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzQ0OTAxMzAxLCJpYXQiOjE3NDQ4OTc3MDEsImVtYWlsIjoicGxheWVyMUBleGFtcGxlLmNvbSIsInBob25lIjoiIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnsiZW1haWwiOiJwbGF5ZXIxQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwic3ViIjoiYThmZDViNjQtYTIwZC00NGNiLTg3ZGQtMTE5N2FkMWEzNjM5In0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NDQ4OTc3MDF9XSwic2Vzc2lvbl9pZCI6ImQxZTU5ODRjLTkxMWEtNDA3ZS1iNTU4LWEyMTExNjY3MjdiNSIsImlzX2Fub255bW91cyI6ZmFsc2V9.tk_DVUD7RHGDhHhLE7z0pSiZ_G9z6zCS56ldE44_vZI
+ const user2 = 

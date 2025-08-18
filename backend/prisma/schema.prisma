@@ -1,0 +1,292 @@
+ datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+ 
+enum TournamentStatus {
+  DRAFT
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+// Represents the registered user in the system
+model User {
+   id                   String                  @id @default(cuid())
+  email                String                  @unique
+  username             String?
+  password             String?
+  avatar               String?                 // Add this field
+  bio                  String?                 // Add this field
+  createdAt            DateTime                @default(now())
+    judgedMatches Match[]   @relation("JudgedMatches")
+    walletAddress     String?
+  updatedAt            DateTime                @updatedAt
+  supabaseId           String?                 @unique
+  isAdmin             Boolean                @default(false)
+ achievements Achievement[] 
+
+  // Tournaments hosted by this user
+  hostedTournaments    Tournament[]            @relation("HostedTournaments")
+  // Tournaments this user is participating in (via TournamentParticipant)
+  participation        TournamentParticipant[] @relation("UserParticipants")
+  // Tournaments this user is spectating (Direct M2M relation)
+  spectatedTournaments Tournament[]            @relation("SpectatedTournaments")
+
+  TournamentAnnouncement TournamentAnnouncement[]
+}
+
+// ... existing schema content ... 
+
+enum MatchStatus {
+  PENDING      // Match is scheduled but hasn't started
+  IN_PROGRESS  // Match is currently being played
+  COMPLETED    // Match is finished with a valid result
+  CANCELLED    // Match was cancelled before completion
+  DISPUTED     // Result is being disputed
+}
+
+model Match {
+  id           String      @id @default(cuid())
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  scheduledTime DateTime?  // When the match is scheduled to occur
+  startTime    DateTime?   // Actual start time
+  endTime      DateTime?   // When the match ended
+  status       MatchStatus @default(PENDING)
+  round        Int         // Tournament round number
+  matchNumber  Int         // Match number within the round
+  
+  // Which tournament this match belongs to
+  tournament   Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId String
+  
+  // Match participants - the teams or individual participants
+  teamA        Team?       @relation("TeamAMatches", fields: [teamAId], references: [id])
+  teamAId      String?
+  teamB        Team?       @relation("TeamBMatches", fields: [teamBId], references: [id])
+  teamBId      String?
+  
+  // For individual participants (non-team tournaments)
+  participantA TournamentParticipant? @relation("ParticipantAMatches", fields: [participantAId], references: [id])
+  participantAId String?
+  participantB TournamentParticipant? @relation("ParticipantBMatches", fields: [participantBId], references: [id])
+  participantBId String?
+  
+  // For bracket tracking
+  nextMatchId  String?    // The ID of the next match the winner advances to
+  
+  // Match result - using JSON for flexibility
+  result       Json?      // { winnerId: string, score: { teamA: number, teamB: number } }
+  
+  // For bracket generation/tracking
+  bracketSection String?  // e.g., "WINNERS", "LOSERS", "FINALS", etc.
+  
+  // Optional judge for the match
+  judge        User?      @relation("JudgedMatches", fields: [judgeId], references: [id])
+  judgeId      String?
+  
+  @@index([tournamentId])
+  @@index([teamAId])
+  @@index([teamBId])
+  @@index([participantAId])
+  @@index([participantBId])
+  @@index([judgeId])
+}
+ 
+ 
+
+ 
+ 
+
+// Represents a single tournament event
+ model Tournament {
+  id                  String           @id @default(cuid())
+  name                String
+  description         String?
+  startDate           DateTime?
+  endDate             DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  status              TournamentStatus @default(DRAFT)
+  format              String           @default("SINGLE_ELIMINATION") // Add this field
+  registrationDeadline DateTime?       // Add this field
+  host                User             @relation("HostedTournaments", fields: [hostId], references: [id])
+  hostId              String
+  minParticipants     Int?
+  maxParticipants     Int?
+  teamSize            Int?
+achievements Achievement[] 
+
+  isTeamBased         Boolean          @default(false)
+    matches      Match[]
+prize              TournamentPrize?
+  // Relationships
+  participants        TournamentParticipant[] @relation("TournamentParticipants")
+  teams               Team[]
+  spectators          User[]                  @relation("SpectatedTournaments")
+
+  @@index([hostId])
+  TournamentAnnouncement TournamentAnnouncement[]
+}
+ 
+
+ // Updates to TournamentParticipant model
+model TournamentParticipant {
+  id           String     @id @default(cuid())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  seed         Int?       // Add this field for participant seeding
+  isApproved   Boolean    @default(true) // Add this field for participant approval
+  receivedPayments  PrizePayment[]
+entryFeeTx   String?
+  // Link to the User participating
+  user         User       @relation("UserParticipants", fields: [userId], references: [id])
+  userId       String
+
+  // Other existing fields...
+  tournament   Tournament @relation("TournamentParticipants", fields: [tournamentId], references: [id])
+  tournamentId String
+  team         Team?      @relation("TeamMembers", fields: [teamId], references: [id])
+  teamId       String?
+  matchesAsParticipantA Match[] @relation("ParticipantAMatches")
+  matchesAsParticipantB Match[] @relation("ParticipantBMatches")
+ 
+
+
+  // Ensures a user can only participate once in the same tournament
+  @@unique([userId, tournamentId])
+  @@index([userId])
+  @@index([tournamentId])
+  @@index([teamId])
+  Team Team[] @relation("TeamCaptain")
+}
+
+// Updates to Team model
+model Team {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?  // Add this field for team description
+  logo         String?  // Add this field for team logo
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // The tournament this team belongs to
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  tournamentId String
+receivedPayments  PrizePayment[]
+  // Other existing fields...
+  captain      TournamentParticipant @relation("TeamCaptain", fields: [captainId], references: [id])
+  captainId    String                @unique
+  matchesAsTeamA Match[]  @relation("TeamAMatches")
+  matchesAsTeamB Match[]  @relation("TeamBMatches")
+  members      TournamentParticipant[] @relation("TeamMembers")
+
+  // Ensures team names are unique within a given tournament
+  @@unique([name, tournamentId])
+  @@index([tournamentId])
+}
+
+// Tournament announcements model
+model TournamentAnnouncement {
+  id           String     @id @default(cuid())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  title        String
+  content      String
+  importance   String     @default("medium") // low, medium, high, urgent
+  
+  // Link to the Tournament
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId String
+  
+  // Link to the User who authored the announcement
+  author       User       @relation(fields: [authorId], references: [id])
+  authorId     String
+  
+  @@index([tournamentId])
+  @@index([authorId])
+}
+model TournamentPrize {
+  id               String     @id @default(cuid())
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  
+  // Link to tournament
+  tournament       Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId     String     @unique // One prize config per tournament
+  
+  // Prize configuration
+  entryFee         String?    // Amount in SOL or SPL token (as string for precision)
+  prizePool        String?    // Total prize pool amount
+  tokenType        String     @default("SOL") // SOL, USDC, custom SPL token
+  tokenAddress     String?    // If using SPL token, store the mint address
+  
+  // Escrow information
+  escrowAddress    String?    // Solana account address holding the funds
+  escrowSignature  String?    // Transaction signature of escrow creation
+  
+  // Prize distribution
+  distribution     Json?      // e.g., {"first": 70, "second": 20, "third": 10}
+  
+  // Platform fee
+  platformFeePercent Float    @default(5.0) // 5% platform fee by default
+  
+  // Payouts tracked separately
+  payouts          PrizePayment[]
+  
+  @@index([tournamentId])
+}
+
+model PrizePayment {
+  id                String    @id @default(cuid())
+  createdAt         DateTime  @default(now())
+  
+  // Link to tournament prize
+  tournamentPrize   TournamentPrize @relation(fields: [tournamentPrizeId], references: [id], onDelete: Cascade)
+  tournamentPrizeId String
+  
+  // Payment details
+  amount            String    // Amount paid
+  position          String    // "first", "second", etc.
+  
+  // Recipient (team or participant)
+  recipientType     String    // "team" or "participant"
+  teamId            String?
+  participantId     String?
+  team              Team?     @relation(fields: [teamId], references: [id])
+  participant       TournamentParticipant? @relation(fields: [participantId], references: [id])
+  
+  // Transaction information
+  txSignature       String    // Solana transaction signature
+  txConfirmed       Boolean   @default(false)
+  
+  @@index([tournamentPrizeId])
+  @@index([teamId])
+  @@index([participantId])
+}
+model Achievement {
+  id           String     @id @default(cuid())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  userId       String     // The user who received the achievement
+  user         User       @relation(fields: [userId], references: [id])
+
+  tournamentId String     // The tournament the achievement relates to
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+
+  type         String     // Type of achievement (e.g., "WINNER_1ST", "PARTICIPANT")
+  mintAddress  String     @unique // The on-chain address of the cNFT
+  metadataUri  String     // URI pointing to the NFT's metadata
+
+  @@index([userId])
+  @@index([tournamentId])
+}
